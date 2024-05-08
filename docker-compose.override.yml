@@ -1,0 +1,62 @@
+services:
+  api:
+    extends:
+      file: docker-compose.base.yml
+      service: base-api
+    container_name: api
+    ports: !override
+      - "${SERVERIP}:9500:9503"
+    volumes:
+      - ./:/app-host-link
+      - ./sessions/main/:/app-host-link/sessions
+    command: !override
+      - "-s=*"
+  bot-api:
+    extends:
+      file: docker-compose.base.yml
+      service: base-api
+    container_name: bot-api
+    ports: !override
+      - "${SERVERIP}:9501:9503"
+    volumes:
+      - ./:/app-host-link
+      - ./sessions/bots/:/app-host-link/sessions
+    command: !override
+      - "-s=*"
+  ad-api:
+    extends:
+      file: docker-compose.base.yml
+      service: base-api
+    container_name: ad-api
+    ports: !override
+      - "${SERVERIP}:9502:9503"
+    volumes:
+      - ./:/app-host-link
+      - ./sessions/ads/:/app-host-link/sessions
+    command: !override
+      - "-s=*"
+  user-api:
+    extends:
+      file: docker-compose.base.yml
+      service: base-api
+    container_name: user-api
+    ports: !override
+      - "${SERVERIP}:9503:9503"
+    volumes:
+      - ./:/app-host-link
+      - ./sessions/users/:/app-host-link/sessions
+    command: !override
+      - "-s=*"
+  mysql:
+    extends:
+      file: docker-compose.base.yml
+      service: base-mysql
+    container_name: mysql
+    ports: !override
+      - "127.0.0.1:9507:3306"
+    command: !override
+      - --skip-grant-tables
+      - --innodb-buffer-pool-size=512M
+      - --wait_timeout=90
+      - --max_allowed_packet=256M
+      - --max_connections=100000

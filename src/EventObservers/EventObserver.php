@@ -4,6 +4,7 @@ namespace TelegramApiServer\EventObservers;
 
 
 use danog\MadelineProto\APIWrapper;
+use JsonException;
 use ReflectionProperty;
 use TelegramApiServer\Client;
 use TelegramApiServer\Logger;
@@ -16,8 +17,26 @@ class EventObserver
     /** @var int[] */
     public static array $sessionClients = [];
 
-    public static function notify(array $update, string $sessionName)
+    /**
+     * @throws JsonException
+     */
+    public static function notify(array $update, string $sessionName): void
     {
+        if (!empty(EventHandler::$redisDb)) {
+            $update['subs'] = count(static::$subscribers);
+            if ($update['subs'] == 0) {
+                if (isset($update['message']['peer_id'])) {
+                    try {
+                        EventHandler::$redisDb->getList('missed_updates_' . $sessionName)->pushTail(
+                            json_encode($update)
+                        );
+                    } catch (Throwable $exception) {
+                    }
+                }
+            }
+        }
+
+
         foreach (static::$subscribers as $clientId => $callback) {
             notice("Pass update to callback. ClientId: {$clientId}");
             $callback($update, $sessionName);

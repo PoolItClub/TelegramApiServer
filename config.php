@@ -21,7 +21,7 @@ $settings = [
         ],
         'rpc' => [
             'flood_timeout' => 5,
-            'rpc_drop_timeout' => 11,
+            'rpc_drop_timeout' => 90,
         ],
         'connection' => [
             'max_media_socket_count' => 10,
@@ -68,6 +68,15 @@ $settings = [
         'passwords' => (array)json_decode((string)getenv('PASSWORDS'), true),
         'bulk_interval' => (float)getenv('REQUESTS_BULK_INTERVAL')
     ],
+    'laravel'=>[
+        'reported_peers'=>array_filter(
+            array_map(
+                'trim',
+                explode(',', (string)getenv('REPORTED_PEERS'))
+            )
+        ),
+        'redis_url'=>(string)getenv('REDIS_URL')
+    ]
 ];
 
 if (empty($settings['telegram']['connection']['proxies']['\danog\MadelineProto\Stream\Proxy\SocksProxy'][0]['address'])) {

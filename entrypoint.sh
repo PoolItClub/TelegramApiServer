@@ -1,4 +1,4 @@
 #!/usr/bin/env bash
 
 docker-compose-wait \
-&& nice -n 20 php server.php -e=.env.docker --docker "$@"
+&& nice -n 20 php server.php -e=sessions/.env.session --docker "$@"
