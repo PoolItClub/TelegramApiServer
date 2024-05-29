@@ -21,7 +21,7 @@ $settings = [
         ],
         'rpc' => [
             'flood_timeout' => 5,
-            'rpc_drop_timeout' => 11,
+            'rpc_drop_timeout' => 20,
         ],
         'connection' => [
             'max_media_socket_count' => 10,
