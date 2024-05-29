@@ -75,7 +75,8 @@ $settings = [
                 explode(',', (string)getenv('REPORTED_PEERS'))
             )
         ),
-        'redis_url'=>(string)getenv('REDIS_URL')
+        'redis_url'=>(string)getenv('REDIS_URL'),
+        'auto_start'=>(bool)filter_var((string)getenv('AUTO_START'), FILTER_VALIDATE_BOOL)
     ]
 ];
 

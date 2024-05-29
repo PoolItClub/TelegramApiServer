@@ -35,7 +35,12 @@ class Client
         foreach ($sessionFiles as $file) {
             $sessionName = Files::getSessionName($file);
             $this->addSession($sessionName);
+            if (Config::getInstance()->get('laravel.auto_start') ?? false) {
+                EventObserver::startEventHandler($sessionName);
+            }
             $this->startLoggedInSession($sessionName);
+
+
         }
 
         $this->startNotLoggedInSessions();

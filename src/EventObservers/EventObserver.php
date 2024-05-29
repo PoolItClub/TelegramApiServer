@@ -31,6 +31,7 @@ class EventObserver
                             json_encode($update)
                         );
                     } catch (Throwable $exception) {
+                        error("Redis: {$exception->getMessage()}");
                     }
                 }
             }
