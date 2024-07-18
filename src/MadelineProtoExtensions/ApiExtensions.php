@@ -81,7 +81,6 @@ final class ApiExtensions
 
         foreach ($entities as $key => &$entity) {
             if (isset($html[$entity['_']])) {
-
                 $text = StrTools::mbSubstr($message, $entity['offset'], $entity['length']);
 
                 $template = $html[$entity['_']];
@@ -118,13 +117,13 @@ final class ApiExtensions
     {
         $startString = StrTools::mbSubstr($original, 0, $position);
         $endString = StrTools::mbSubstr($original, $position + $length, StrTools::mbStrlen($original));
-        return $startString . $replacement . $endString;
+        return $startString.$replacement.$endString;
     }
 
     /**
      * Пересылает сообщения без ссылки на оригинал.
      *
-     * @param array $data
+     * @param  array  $data
      * <pre>
      * [
      *  'from_peer' => '',
@@ -272,7 +271,6 @@ final class ApiExtensions
                 break;
             default:
                 throw new NoMediaException('Message has no preview');
-
         }
         if (null === $thumb) {
             throw new NoMediaException('Empty preview');
@@ -318,13 +316,23 @@ final class ApiExtensions
     /**
      * Download to Amp HTTP response.
      *
-     * @param array $info
+     * @param  array  $info
      *      Any downloadable array: message, media etc...
      *
      */
     public function downloadToResponse(array $info): Response
     {
-        return $this->madelineProto->downloadToResponse($info, $this->request);
+        $size = null;
+        $mime = null;
+        $name = null;
+        if (isset($info['file_id'])) {
+            $size = $info['size'] ?? 0;
+            $mime = $info['mime'] ?? '';
+            $name = $info['name'] ?? '';
+            $info = $info['file_id'];
+        }
+        return $this->madelineProto->downloadToResponse(messageMedia: $info, request: $this->request, size: $size,
+            mime: $mime, name: $name);
     }
 
     /**
@@ -379,7 +387,7 @@ final class ApiExtensions
     public function getUpdates(array $params): array
     {
         foreach ($params as $key => $value) {
-            $params[$key] = match($key) {
+            $params[$key] = match ($key) {
                 'offset', 'limit' => (int) $value,
                 'timeout' => (float) $value,
                 default => throw new InvalidArgumentException("Unknown parameter: {$key}"),

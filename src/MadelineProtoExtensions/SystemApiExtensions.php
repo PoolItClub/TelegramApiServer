@@ -101,7 +101,7 @@ final class SystemApiExtensions
 
             $sessions[$session] = [
                 'session' => $session,
-                'file' => Files::getSessionFile($session),
+                'file' => Files::getSessionFile((string) $session),
                 'status' => $status,
             ];
         }
@@ -119,7 +119,7 @@ final class SystemApiExtensions
         if (\is_file($file)) {
             $futures = [];
             foreach (\glob("$file*") as $file) {
-                $futures[] = async(fn () => deleteFile($file));
+                $futures[] = async(fn() => deleteFile($file));
             }
             awaitAll($futures);
         } else {
@@ -150,7 +150,7 @@ final class SystemApiExtensions
 
     public function exit(): string
     {
-        EventLoop::defer(static fn () => exit());
+        EventLoop::defer(static fn() => exit());
         return 'ok';
     }
 
@@ -160,6 +160,6 @@ final class SystemApiExtensions
         for ($i = 0; $bytes > 1024; $i++) {
             $bytes /= 1024;
         }
-        return \round($bytes, 2) . ' ' . $units[$i];
+        return \round($bytes, 2).' '.$units[$i];
     }
 }

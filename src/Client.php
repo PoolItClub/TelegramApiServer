@@ -12,7 +12,6 @@ use danog\MadelineProto\SecurityException;
 use danog\MadelineProto\Settings;
 use danog\MadelineProto\Settings\Database\SerializerType;
 use danog\MadelineProto\SettingsAbstract;
-use Exception;
 use InvalidArgumentException;
 use Psr\Log\LogLevel;
 use ReflectionProperty;
@@ -36,13 +35,16 @@ final class Client
 
     public function connect(array $sessionFiles)
     {
-        warning(PHP_EOL . 'Starting MadelineProto...' . PHP_EOL);
+        warning(PHP_EOL.'Starting MadelineProto...'.PHP_EOL);
 
         $this->setFatalErrorHandler();
 
         foreach ($sessionFiles as $file) {
             $sessionName = Files::getSessionName($file);
             $this->addSession($sessionName);
+            if (((bool) Config::getInstance()->get('laravel.auto_start')) === true) {
+                EventObserver::startEventHandler($sessionName);
+            }
             $this->startLoggedInSession($sessionName);
         }
 
@@ -51,7 +53,7 @@ final class Client
         $sessionsCount = \count($sessionFiles);
         warning(
             "\nTelegramApiServer ready."
-            . "\nNumber of sessions: {$sessionsCount}."
+            ."\nNumber of sessions: {$sessionsCount}."
         );
     }
 
@@ -167,8 +169,11 @@ final class Client
         return $wrapper;
     }
 
-    private static function getSettingsFromArray(string $session, array $settings, SettingsAbstract $settingsObject = new Settings()): SettingsAbstract
-    {
+    private static function getSettingsFromArray(
+        string $session,
+        array $settings,
+        SettingsAbstract $settingsObject = new Settings()
+    ): SettingsAbstract {
         foreach ($settings as $key => $value) {
             if (\is_array($value) && $key !== 'proxies') {
                 if ($key === 'db' && isset($value['type'])) {
@@ -193,13 +198,13 @@ final class Client
                     }
                 }
 
-                $method = 'get' . \ucfirst(\str_replace('_', '', \ucwords($key, '_')));
+                $method = 'get'.\ucfirst(\str_replace('_', '', \ucwords($key, '_')));
                 self::getSettingsFromArray($session, $value, $settingsObject->$method());
             } else {
                 if ($key === 'serializer' && \is_string($value)) {
                     $value = SerializerType::from($value);
                 }
-                $method = 'set' . \ucfirst(\str_replace('_', '', \ucwords($key, '_')));
+                $method = 'set'.\ucfirst(\str_replace('_', '', \ucwords($key, '_')));
                 $settingsObject->$method($value);
             }
         }
@@ -208,18 +213,24 @@ final class Client
 
     private function setFatalErrorHandler(): void
     {
-
         $token = Config::getInstance()->get('error.bot_token');
         $peers = Config::getInstance()->get('error.peers');
         $prefix = Config::getInstance()->get('error.prefix');
         $resume = Config::getInstance()->get('error.resume_on_error');
 
         $currentHandler = EventLoop::getErrorHandler();
-        EventLoop::setErrorHandler(static fn (\Throwable $e) => self::errorHandler($e, $currentHandler, $token, $peers, $prefix, $resume));
+        EventLoop::setErrorHandler(static fn(\Throwable $e) => self::errorHandler($e, $currentHandler, $token, $peers,
+            $prefix, $resume));
     }
 
-    private static function errorHandler(\Throwable $e, ?callable $currentHandler, string $token, array $peers, string $prefix, bool $resume): void
-    {
+    private static function errorHandler(
+        \Throwable $e,
+        ?callable $currentHandler,
+        string $token,
+        array $peers,
+        string $prefix,
+        bool $resume
+    ): void {
         if ($e instanceof UnhandledFutureError) {
             $e = $e->getPrevious();
         }
@@ -254,11 +265,11 @@ final class Client
                         
                         <pre>
                             <code class="json">
-                            {$encoded(\json_encode($exceptionArray, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT))}
+                            {$encoded(\json_encode($exceptionArray,
+                        JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT))}
                             </code>
                         </pre>
-                        HTML
-                    ;
+                        HTML;
                     \curl_setopt($ch, CURLOPT_POSTFIELDS, \json_encode([
                         'chat_id' => $peer,
                         'text' => trim($text),
@@ -277,7 +288,6 @@ final class Client
                             ],
                         ]);
                     }
-
                 }
             } catch (\Throwable $curlException) {
                 Logger::getInstance()->error($curlException);
