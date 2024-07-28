@@ -53,12 +53,11 @@ final class Authorization implements Middleware
             return $requestHandler->handleRequest($request);
         }
 
-        return ErrorResponses::get(HttpStatus::UNAUTHORIZED, 'Your host is not allowed: ' . $host);
+        return ErrorResponses::get(HttpStatus::UNAUTHORIZED, 'Your host is not allowed: '.$host);
     }
 
     private function isIpAllowed(string $host): bool
     {
-
         if ($this->ipWhitelist && !\in_array($host, $this->ipWhitelist, true)) {
             return false;
         }
