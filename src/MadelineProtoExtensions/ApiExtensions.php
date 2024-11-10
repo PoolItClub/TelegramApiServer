@@ -81,7 +81,6 @@ final class ApiExtensions
 
         foreach ($entities as $key => &$entity) {
             if (isset($html[$entity['_']])) {
-
                 $text = StrTools::mbSubstr($message, $entity['offset'], $entity['length']);
 
                 $template = $html[$entity['_']];
@@ -329,7 +328,17 @@ final class ApiExtensions
      */
     public function downloadToResponse(array $info): Response
     {
-        return $this->madelineProto->downloadToResponse($info, $this->request);
+        $size = null;
+        $mime = null;
+        $name = null;
+        if (isset($info['file_id'])) {
+            $size = $info['size'] ?? 0;
+            $mime = $info['mime'] ?? '';
+            $name = $info['name'] ?? '';
+            $info = $info['file_id'];
+        }
+        return $this->madelineProto->downloadToResponse(messageMedia: $info, request: $this->request, size: $size,
+            mime: $mime, name: $name);
     }
 
     /**
