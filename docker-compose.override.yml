@@ -29,21 +29,6 @@ services:
       - path: ./.env.bots
     command: !override
       - "-s=*"
-  ad-api:
-    extends:
-      file: docker-compose.base.yml
-      service: base-api
-    container_name: ${AD_CONTAINER_NAME}
-    ports: !override
-      - "${SERVERIP}:${AD_PORT}:9503"
-    env_file:
-      - path: ./.env
-      - path: ./.env.ads
-    volumes:
-      - ./:/app-host-link
-      - ./sessions/ads/:/app-host-link/sessions
-    command: !override
-      - "-s=*"
   user-api:
     extends:
       file: docker-compose.base.yml

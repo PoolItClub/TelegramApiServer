@@ -4,7 +4,6 @@ namespace TelegramApiServer\MadelineProtoExtensions;
 
 use Amp\ByteStream\ReadableBuffer;
 use Amp\ByteStream\ReadableStream;
-use Amp\ByteStream\WritableResourceStream;
 use Amp\Http\Server\FormParser\StreamedField;
 use Amp\Http\Server\Request;
 use Amp\Http\Server\Response;
@@ -277,7 +276,17 @@ final class ApiExtensions
      */
     public function downloadToResponse(array $info): Response
     {
-        return $this->madelineProto->downloadToResponse($info, $this->request);
+        $size = null;
+        $mime = null;
+        $name = null;
+        if (isset($info['file_id'])) {
+            $size = $info['size'] ?? 0;
+            $mime = $info['mime'] ?? '';
+            $name = $info['name'] ?? '';
+            $info = $info['file_id'];
+        }
+        return $this->madelineProto->downloadToResponse(messageMedia: $info, request: $this->request, size: $size,
+            mime: $mime, name: $name);
     }
 
     /**
