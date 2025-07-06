@@ -2,9 +2,8 @@
 
 namespace TelegramApiServer\EventObservers;
 
-use danog\MadelineProto\APIWrapper;
-use ReflectionProperty;
 use TelegramApiServer\Client;
+use TelegramApiServer\Config;
 use TelegramApiServer\Logger;
 use Throwable;
 
@@ -17,9 +16,28 @@ final class EventObserver
 
     public static function notify(array $update, string $sessionName)
     {
+        $activeClients = 0;
         foreach (self::$subscribers as $clientId => $callback) {
+            $activeClients++;
             notice("Pass update to callback. ClientId: {$clientId}");
             $callback($update, $sessionName);
+        }
+        if ($activeClients === 0 && !empty(EventHandler::$redisDb)) {
+            if (Config::getInstance()->get('laravel.handle_old_data')) {
+                $update['subs'] = count(static::$subscribers);
+                $update['auto_start'] = json_encode(Config::getInstance()->get('laravel.auto_start'));
+                if ($update['subs'] == 0) {
+                    if (isset($update['message']['peer_id'])) {
+                        try {
+                            EventHandler::$redisDb->getList('missed_updates_'.$sessionName)->pushTail(
+                                json_encode($update)
+                            );
+                        } catch (Throwable $exception) {
+                            error("Redis: {$exception->getMessage()}");
+                        }
+                    }
+                }
+            }
         }
     }
 
