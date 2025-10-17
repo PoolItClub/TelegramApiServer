@@ -2,7 +2,8 @@ services:
   api:
     extends:
       file: docker-compose.base.yml
-      service: api
+      service: base-api
+    container_name: api
     ports:
       - "127.0.0.1:9503:9503"
     command:
@@ -12,7 +13,8 @@ services:
   mysql:
     extends:
       file: docker-compose.base.yml
-      service: mysql
+      service: base-mysql
+    container_name: mysql
     ports:
       - "127.0.0.1:9507:3306"
 networks:

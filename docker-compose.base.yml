@@ -1,5 +1,5 @@
 services:
-  api:
+  base-api:
     image: xtrime/telegram-api-server:2.7
     init: true
     build:
@@ -23,7 +23,7 @@ services:
       interval: 60s
       timeout: 30s
       retries: 1
-  mysql:
+  base-mysql:
     image: mariadb:11.4
     restart: unless-stopped
     volumes:
@@ -34,5 +34,6 @@ services:
     command:
       - --skip-grant-tables
       - --innodb-buffer-pool-size=128M
+      - --wait_timeout=65
       - --innodb-compression-default=1
       - --innodb-compression-algorithm=zlib

@@ -3,8 +3,6 @@
 use danog\MadelineProto\Logger;
 use TelegramApiServer\EventObservers\LogObserver;
 
-use function Amp\Socket\SocketAddress\fromString;
-
 $settings = [
     'server' => [
         'address' => (string)getenv('SERVER_ADDRESS'),
@@ -38,7 +36,7 @@ $settings = [
         'rpc' => [
             'flood_timeout' => 5,
             'rpc_resend_timeout' => 10,
-            'rpc_drop_timeout' => 20,
+            'rpc_drop_timeout' => (int) (getenv('RPC_DROP_TIMEOUT') ?: 20),
         ],
         'connection' => [
             'max_media_socket_count' => 10,
@@ -76,9 +74,11 @@ $settings = [
             'download_parallel_chunks' => 20,
         ],
         'metrics' => [
-            'enable_prometheus_collection' => filter_var((string)getenv("PROMETHEUS_ENABLE"), FILTER_VALIDATE_BOOL),
+            'enable_prometheus_collection' => false,
+            // filter_var((string)getenv("PROMETHEUS_ENABLE"), FILTER_VALIDATE_BOOL),
             'enable_memprof_collection' => false,
-            'metrics_bind_to' => filter_var((string)getenv("PROMETHEUS_ENABLE"), FILTER_VALIDATE_BOOL) ? fromString((string)getenv("PROMETHEUS_BIND_TO")) : null,
+            'metrics_bind_to' => null
+            //f filter_var((string)getenv("PROMETHEUS_ENABLE"), FILTER_VALIDATE_BOOL) ? fromString((string)getenv("PROMETHEUS_BIND_TO")) : null,
         ]
     ],
     'api' => [
@@ -91,6 +91,17 @@ $settings = [
         'passwords' => (array)json_decode((string)getenv('PASSWORDS'), true),
         'bulk_interval' => (float)getenv('REQUESTS_BULK_INTERVAL')
     ],
+    'laravel' => [
+        'reported_peers' => array_filter(
+            array_map(
+                'trim',
+                explode(',', (string) getenv('REPORTED_PEERS'))
+            )
+        ),
+        'redis_url' => (string) getenv('REDIS_URL'),
+        'auto_start' => (bool) filter_var((string) getenv('AUTO_START'), FILTER_VALIDATE_BOOL),
+        'handle_old_data' => (bool) filter_var((string) getenv('HANDLE_OLD_DATA'), FILTER_VALIDATE_BOOL),
+    ]
 ];
 
 if (empty($settings['telegram']['connection']['proxies']['\danog\MadelineProto\Stream\Proxy\SocksProxy'][0]['address'])) {
