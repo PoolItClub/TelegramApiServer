@@ -123,6 +123,26 @@ It's recommended to use http_build_query, when using GET requests.
 * sendMessage: `http://127.0.0.1:9503/api/messages.sendMessage/?peer=@xtrime&message=Hello!`
 * copy message from one channel to another (not repost): `http://127.0.0.1:9503/api/copyMessages/?from_peer=@xtrime&to_peer=@xtrime&id[0]=1`
     
+## Request batching
+
+TAS can group requests into batches and limit concurrency. Similar mechanisms are used in official Telegram clients ([Desktop](https://github.com/telegramdesktop/tdesktop/blob/dev/Telegram/SourceFiles/mtproto/session.cpp), [Android](https://github.com/DrKLO/Telegram/blob/master/TMessagesProj/jni/tgnet/ConnectionsManager.cpp)).
+
+Batching is disabled by default. To enable it, set a positive interval in `.env` or `.env.docker`:
+
+```dotenv
+REQUESTS_BULK_INTERVAL=0.003
+REQUESTS_BULK_SIZE=10
+REQUESTS_BULK_CONCURRENCY=5
+```
+
+| Setting | Default | Meaning |
+| --- | --- | --- |
+| `REQUESTS_BULK_INTERVAL` | `0` | Maximum batch collection time in seconds. `0` disables batching and the concurrency limit. |
+| `REQUESTS_BULK_SIZE` | `10` | Maximum requests per batch. |
+| `REQUESTS_BULK_CONCURRENCY` | `5` | Maximum batches executing concurrently. |
+
+A batch starts when its size is reached or the interval expires, whichever happens first. These limits are shared across sessions within one TAS process.
+
 ## Advanced features
 ### Get events/updates
 Telegram is event driven platform. For example:  every time your account receives a message you immediately get an update.
@@ -180,34 +200,63 @@ There are few options to upload and send media files:
 
 ### Downloading files
 
-```shell script
-curl --location --request POST '127.0.0.1:9503/api/downloadToResponse' \
---header 'Content-Type: application/json' \
---data-raw '{
-    "media": {
-        "_": "messageMediaDocument",
-        "document": {
-            "_": "document",
-            "id": 5470079466401169993,
-            "access_hash": -6754208767885394084,
-            "file_reference": {
-                "_": "bytes",
-                "bytes": "AkKdqJkAACnyXshwzMhdzeC5RkdVZeh58sAB/UU="
-            },
-            "date": 1551713685,
-            "mime_type": "video/mp4",
-            "size": 400967,
-            "dc_id": 2,
-            "attributes": [
-                {
-                    "_": "documentAttributeFilename",
-                    "file_name": "одолдол.mp4"
-                }
-            ]
+By bot API file ID (the session needs to be the same session that generated the file ID, no filesize limit):
+- Telegram Bot Api format:
+    ```shell
+    curl --location --request POST '127.0.0.1:9503/api/downloadToResponse' \
+    --header 'Content-Type: application/json' \
+    --data-raw '{
+        "media": {
+            "file_id": "nalsfknalskfsnakfl",
+            "file_name": "test.pdf",
+            "file_size": 28044678
         }
-    }
-}'
-```
+    }' -o test.pdf
+    ```
+- MadelineProto constructor: 
+    ```shell
+    curl --location --request POST '127.0.0.1:9503/api/yourBot/downloadToResponse' \
+    --header 'Content-Type: application/json' \
+    --data-raw '{
+        "media": {
+            "_": "BotApiFileId",
+            "fileId": "nalsfknalskfsnakfl",
+            "size": 28044678,
+            "fileName":  "test.pdf",
+            "protected":  false,
+        }
+    }' -o test.pdf
+    ```
+
+- By MessageMedia:
+    ```shell script
+    curl --location --request POST '127.0.0.1:9503/api/downloadToResponse' \
+    --header 'Content-Type: application/json' \
+    --data-raw '{
+        "media": {
+            "_": "messageMediaDocument",
+            "document": {
+                "_": "document",
+                "id": 5470079466401169993,
+                "access_hash": -6754208767885394084,
+                "file_reference": {
+                    "_": "bytes",
+                    "bytes": "AkKdqJkAACnyXshwzMhdzeC5RkdVZeh58sAB/UU="
+                },
+                "date": 1551713685,
+                "mime_type": "video/mp4",
+                "size": 400967,
+                "dc_id": 2,
+                "attributes": [
+                    {
+                        "_": "documentAttributeFilename",
+                        "file_name": "одолдол.mp4"
+                    }
+                ]
+            }
+        }
+    }'
+    ```
 
 Also see: https://docs.madelineproto.xyz/docs/FILES.html#downloading-files
 
@@ -363,6 +412,20 @@ Full list of custom methods and their parameters available in [ApiExtensions cla
 * `getMedia` - download media to stream/browser
 * `getMediaPreview` - download media preview to stream/browser
 * `uploadMediaForm` - upload document from POST request.
+
+## Crypto
+
+The Docker image inherits `madeline_crypto` from `danog/madelineproto`; TAS does
+not build or install it. Extension sources are maintained in
+[danog/MadelineCrypto](https://github.com/danog/MadelineCrypto).
+
+Recent MadelineProto versions use synchronous native crypto even when the async
+executor is unavailable. AES-IGE falls back to FFI/libcrypto, then OpenSSL, then
+pure PHP when native crypto is unavailable. AES-CTR prefers native crypto, then
+OpenSSL, then phpseclib. Invalid encrypted messages are rejected without retrying
+another backend.
+
+Crypto API compatibility and fallback selection are handled by MadelineProto.
 
 ## Contacts
 

@@ -2,8 +2,7 @@
 
 namespace TelegramApiServer\Controllers;
 
-use Amp\DeferredFuture;
-use Amp\Future;
+use Amp\CancelledException;
 use Amp\Http\Server\Request;
 use Amp\Http\Server\Router;
 use danog\MadelineProto\API;
@@ -11,9 +10,10 @@ use danog\MadelineProto\MTProto;
 use Exception;
 use ReflectionClass;
 use ReflectionMethod;
-use Revolt\EventLoop;
 use TelegramApiServer\Client;
 use TelegramApiServer\Config;
+use TelegramApiServer\Exceptions\NoticeException;
+use TelegramApiServer\RequestBatcher;
 use TelegramApiServer\MadelineProtoExtensions\ApiExtensions;
 use UnexpectedValueException;
 
@@ -55,7 +55,14 @@ final class ApiController extends AbstractApiController
 
     }
 
-    private static ?Future $w = null;
+    private static ?RequestBatcher $batcher = null;
+    private static bool $stopping = false;
+
+    public static function stopQueue(): void
+    {
+        self::$stopping = true;
+        self::$batcher?->stop();
+    }
 
     private static function prepareArgs(bool $needRequest, array $params, array $args): array
     {
@@ -75,29 +82,28 @@ final class ApiController extends AbstractApiController
      */
     protected function callApi(Request $request): mixed
     {
+        if (self::$stopping) {
+            throw new NoticeException('Server is stopping', 503);
+        }
         $path = $request->getAttribute(Router::class);
         $session = $path['session'] ?? null;
         $api = \explode('.', $path['method'] ?? '');
 
         $madelineProto = Client::getInstance()->getSession($session);
-        $tick = Config::getInstance()->get('api.bulk_interval');
         $params = $this->resolveRequest($request);
 
-        if (!$tick) {
+        self::$batcher ??= new RequestBatcher(
+            Config::getInstance()->get('api.bulk_size'),
+            Config::getInstance()->get('api.bulk_interval'),
+            Config::getInstance()->get('api.bulk_concurrency'),
+        );
+        $client = $request->getClient();
+        return self::$batcher->execute(function () use ($client, $madelineProto, $api, $params): mixed {
+            if ($client->isClosed()) {
+                throw new CancelledException;
+            }
             return $this->callApiCommon($madelineProto, $api, $params);
-        }
-
-        if (!self::$w) {
-            $f = new DeferredFuture();
-            self::$w = $f->getFuture();
-            EventLoop::delay($tick, static function () use ($f): void {
-                $f->complete();
-                self::$w = null;
-            });
-        }
-        self::$w->await();
-
-        return $this->callApiCommon($madelineProto, $api, $params);
+        });
     }
 
 
