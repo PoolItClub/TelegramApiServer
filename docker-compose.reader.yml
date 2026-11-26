@@ -1,0 +1,42 @@
+# The reader account (the old "ad" account) on TelegramApiServer 2.8.
+# It runs from its own folder, /home/cleavr/TAS-reader, beside the working
+# accounts in /home/cleavr/TAS, and shares their MariaDB (tas-mysql, reached
+# as "mysql") over the network that folder already created.
+#
+# Login once: docker compose -p tas-reader -f docker-compose.reader.yml run --rm reader-login
+# Start:      docker compose -p tas-reader -f docker-compose.reader.yml up -d
+name: tas-reader
+
+services:
+  reader-api:
+    extends:
+      file: docker-compose.base.yml
+      service: base-api
+    container_name: tas-reader-api
+    env_file:
+      - path: ./.env
+      - path: ./.env.reader
+    ports:
+      - "${SERVERIP}:9502:9503"
+    volumes:
+      - ./sessions/reader/:/app-host-link/sessions
+    command:
+      - "-s=reader"
+    depends_on: !reset []
+    mem_limit: 384m
+
+  # The one-time interactive login. "up" never starts it (it has a profile).
+  # Its health check is off: the server asks for the phone and the code before
+  # it answers the check, and a failed check stops the container after 60 s.
+  reader-login:
+    extends:
+      service: reader-api
+    profiles: ["login"]
+    container_name: tas-reader-login
+    healthcheck: !override
+      disable: true
+
+networks:
+  default:
+    name: telegram-api-server
+    external: true
